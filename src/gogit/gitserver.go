@@ -1,12 +1,12 @@
 package gogit
 
 import (
+	"bufio"
 	"crypto/tls"
 	b64 "encoding/base64"
 	json "encoding/json"
 	"fmt"
 	"io"
-  "bufio"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,25 +26,25 @@ func getOrDefault(str, defaultValue string) string {
 }
 
 var (
-	GITMOUTH_PORT               = getOrDefault(os.Getenv("GITMOUTH_PORT"), "2222")
-	GITMOUTH_PRIVATE_KEY        = getOrDefault(os.Getenv("GITMOUTH_PRIVATE_KEY"), "../../certs/server.key")
-	GITMOUTH_PUBLIC_KEY         = getOrDefault(os.Getenv("GITMOUTH_PUBLIC_KEY"), "../../certs/server.key.pub")
-	DYNOHOST_RENDEZVOUS_PORT    = getOrDefault(os.Getenv("DYNOHOST_RENDEZVOUS_PORT"), "4000")
-	APISERVER_PROTOCOL          = getOrDefault(os.Getenv("APISERVER_PROTOCOL"), "https")
-	APISERVER_HOSTNAME          = getOrDefault(os.Getenv("APISERVER_HOSTNAME"), "localhost")
-	APISERVER_PORT              = getOrDefault(os.Getenv("APISERVER_PORT"), "5000")
-	APISERVER_KEY               = os.Getenv("APISERVER_KEY")
+	GITMOUTH_PORT            = getOrDefault(os.Getenv("GITMOUTH_PORT"), "2222")
+	GITMOUTH_PRIVATE_KEY     = getOrDefault(os.Getenv("GITMOUTH_PRIVATE_KEY"), "../../certs/server.key")
+	GITMOUTH_PUBLIC_KEY      = getOrDefault(os.Getenv("GITMOUTH_PUBLIC_KEY"), "../../certs/server.key.pub")
+	DYNOHOST_RENDEZVOUS_PORT = getOrDefault(os.Getenv("DYNOHOST_RENDEZVOUS_PORT"), "4000")
+	APISERVER_PROTOCOL       = getOrDefault(os.Getenv("APISERVER_PROTOCOL"), "https")
+	APISERVER_HOSTNAME       = getOrDefault(os.Getenv("APISERVER_HOSTNAME"), "localhost")
+	APISERVER_PORT           = getOrDefault(os.Getenv("APISERVER_PORT"), "5000")
+	APISERVER_KEY            = os.Getenv("APISERVER_KEY")
 
 	appNameRegexp = regexp.MustCompile(`^'/*(?P<app_name>[a-zA-Z0-9][a-zA-Z0-9@_-]*).git'$`)
 
-  tr = &http.Transport{
-    TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-  }
-	client        = &http.Client{Transport: tr}
+	tr = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = &http.Client{Transport: tr}
 )
 
 func main() {
-  StartGitServer()
+	StartGitServer()
 }
 
 func StartGitServer() {
@@ -66,7 +66,7 @@ func StartGitServer() {
 			log.Printf("Checking fingerprint %v ", url)
 			resp, err := client.Do(req)
 			if err != nil {
-        log.Fatal("Unable to contact api server ", err)
+				log.Fatal("Unable to contact api server ", err)
 				return false
 			}
 			defer resp.Body.Close()
@@ -94,28 +94,28 @@ func StartGitServer() {
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-  log.Println("Git Server Listen on " + GITMOUTH_PORT)
-	listener, err := ssh.Listen("tcp", "0.0.0.0:" + GITMOUTH_PORT, config)
+	log.Println("Git Server Listen on " + GITMOUTH_PORT)
+	listener, err := ssh.Listen("tcp", "0.0.0.0:"+GITMOUTH_PORT, config)
 	if err != nil {
 		log.Fatal("failed to listen for connection")
 	}
-  go func(){
-    for {
-      // A ServerConn multiplexes several channels, which must 
-      // themselves be Accepted.
-      log.Println("Git Server accept connection")
-      sConn, err := listener.Accept()
-      if err != nil {
-        log.Fatal("failed to accept incoming connection")
-        continue
-      }
-      if err := sConn.Handshake(); err != nil {
-        log.Fatal("failed to handshake")
-        continue
-      }
-      go handleServerConn(sConn)
-    }
-  }()
+	go func() {
+		for {
+			// A ServerConn multiplexes several channels, which must 
+			// themselves be Accepted.
+			log.Println("Git Server accept connection")
+			sConn, err := listener.Accept()
+			if err != nil {
+				log.Fatal("failed to accept incoming connection")
+				continue
+			}
+			if err := sConn.Handshake(); err != nil {
+				log.Fatal("failed to handshake")
+				continue
+			}
+			go handleServerConn(sConn)
+		}
+	}()
 }
 
 func handleServerConn(sConn *ssh.ServerConn) {
@@ -150,20 +150,20 @@ func handleServerConn(sConn *ssh.ServerConn) {
 // Ssh priv/pub key authentication successed and a channel of type "session" is initiated
 func handleChannel(apiKey string, ch ssh.Channel) {
 	ch.Accept()
-  var channelRequest []byte
-  _, err := ch.Read(channelRequest)
+	var channelRequest []byte
+	_, err := ch.Read(channelRequest)
 	if err == io.EOF {
 		return
 	}
-  var cmd string
+	var cmd string
 	if err != nil {
-    switch maybeChannelRequest := err.(type){
-      case ssh.ChannelRequest: 
-        cmd = string(maybeChannelRequest.Payload)
-      default:
-        log.Fatal("handleChannel readLine err:", err)
-        return
-    }
+		switch maybeChannelRequest := err.(type) {
+		case ssh.ChannelRequest:
+			cmd = string(maybeChannelRequest.Payload)
+		default:
+			log.Fatal("handleChannel readLine err:", err)
+			return
+		}
 	}
 	defer ch.Close()
 
@@ -171,7 +171,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 		fmt.Fprintf(ch, `\n ! Invalid path.\n ! Syntax is: git@heroku.com:<app>.git where <app> is your app\'s name.\n\n`)
 	}
 
-  log.Printf("receive command %v", cmd)
+	log.Printf("receive command %v", cmd)
 
 	cmdParts := strings.Split(cmd, ` `)
 	if len(cmdParts) != 2 {
@@ -182,7 +182,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	// git push ==> comand is git-receive-pack
 	// git pull ==> comand is git-upload-pack
 	gitCommand := cmdParts[0]
-	if !strings.EqualFold(gitCommand,"git-receive-pack") && strings.EqualFold(gitCommand,"git-upload-pack") {
+	if !strings.EqualFold(gitCommand, "git-receive-pack") && strings.EqualFold(gitCommand, "git-upload-pack") {
 		returnPathError()
 		return
 	}
@@ -199,7 +199,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	// create a new temporary dyno to execute a git command
 	url := APISERVER_PROTOCOL + `://` + APISERVER_HOSTNAME + `:` + APISERVER_PORT + `/internal/` + appName + `/gitaction?command=` + gitCommand
 
-  log.Printf("Execute gitaction %v", url)
+	log.Printf("Execute gitaction %v", url)
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal("Unable to build request", err)
@@ -225,9 +225,9 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 
 	// parse the git action response
 	type GitActionMsg struct {
-    Host    string `json:"host"`    // dynohost hostname where the dyno is started
-    Dyno_id string `json:"dyno_id"` // unique id for the dyno
-    Rez_id  string `json:"rez_id"`  // TODO remove this unused field
+		Host    string `json:"host"`    // dynohost hostname where the dyno is started
+		Dyno_id string `json:"dyno_id"` // unique id for the dyno
+		Rez_id  string `json:"rez_id"`  // TODO remove this unused field
 	}
 
 	var msg GitActionMsg
@@ -240,7 +240,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	// connect to rendezvous, the dyno stdin/stdout-stderr stream hub
 	adr := msg.Host + ":" + DYNOHOST_RENDEZVOUS_PORT
 
-  log.Printf("Connect to Dynohost Rendezvous %v", adr)
+	log.Printf("Connect to Dynohost Rendezvous %v", adr)
 	conn, err := tls.Dial("tcp", adr, &tls.Config{
 		InsecureSkipVerify: true,
 	})
@@ -248,43 +248,43 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 		log.Fatal("unable to contact dynohost rendezvous "+adr, err)
 		return
 	}
-  defer conn.Close()
+	defer conn.Close()
 
 	// Authenticate on rendezvous, and register the dyno
 	fmt.Fprintf(conn, APISERVER_KEY+"\n"+msg.Dyno_id+"\n")
-  
-  err = ch.AckRequest(true)
-  if err != nil {
-    log.Fatal(err)
-    return
-  }
 
-  stdErr := ch.Stderr()
+	err = ch.AckRequest(true)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	stdErr := ch.Stderr()
 
 	// read everything from rendezvous connection and write to the ssh channel
 	for {
-    reader := bufio.NewReader(conn)
-    buf, err := reader.ReadBytes('\n')
+		reader := bufio.NewReader(conn)
+		buf, err := reader.ReadBytes('\n')
 		if err == io.EOF {
-      // TODO send exit-status message
+			// TODO send exit-status message
 			return
 		}
 		if err != nil {
 			log.Fatal("Unable to read from dynohost rendezvous", err)
 			return
 		}
-    if len(buf) >=2 && buf[0] == 'E' && buf[1] == ':'{
-      _, err = stdErr.Write(buf[2:])
-      if err != nil {
-        log.Fatal("Unable to write to ssh channel", err)
-        return
-      }
-    }else{
-      _, err = ch.Write(buf)
-      if err != nil {
-        log.Fatal("Unable to write to ssh channel", err)
-        return
-      }
-    }
+		if len(buf) >= 2 && buf[0] == 'E' && buf[1] == ':' {
+			_, err = stdErr.Write(buf[2:])
+			if err != nil {
+				log.Fatal("Unable to write to ssh channel", err)
+				return
+			}
+		} else {
+			_, err = ch.Write(buf)
+			if err != nil {
+				log.Fatal("Unable to write to ssh channel", err)
+				return
+			}
+		}
 	}
 }
