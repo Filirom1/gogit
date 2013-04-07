@@ -10,6 +10,7 @@ import (
   "io"
 	"net/http"
 	"testing"
+  "strings"
   "crypto"
   "crypto/rsa"
   "crypto/x509"
@@ -81,13 +82,13 @@ func (s *MySuite) startApiServer(c *C) {
 			http.Error(w, "Not allowed", 405)
       return
 		}
-		fmt.Fprintf(w, ":1234")
+		fmt.Fprintf(w, "1234")
 	})
 
 	http.HandleFunc("/internal/myapp/gitaction", func(w http.ResponseWriter, r *http.Request) {
 		// check basic auth ':1234' encoded in base64 
     log.Printf(r.Header.Get("Authorization"))
-		if r.Header.Get("Authorization") != "Basic OjEyMzQK" {
+		if !strings.EqualFold(r.Header.Get("Authorization"), "Basic OjEyMzQ=") {
 			http.Error(w, "Unauthorized", 401)
       return
 		}

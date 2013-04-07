@@ -79,9 +79,8 @@ func StartGitServer() {
 				return false
 			}
 			apiKey := string(Body)
-      user = apiKey
 			cnn.User = apiKey
-			log.Println("User API key is " + apiKey)
+			log.Println("User API key is " + cnn.User)
 
 			return true
 		},
@@ -171,7 +170,6 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	defer ch.Close()
 
 	returnPathError := func() {
-    panic("ici")
 		fmt.Fprintf(ch, `\n ! Invalid path.\n ! Syntax is: git@heroku.com:<app>.git where <app> is your app\'s name.\n\n`)
 	}
 
@@ -227,9 +225,9 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 
 	// parse the git action response
 	type GitActionMsg struct {
-		host    string // dynohost hostname where the dyno is started
-		dyno_id string // unique id for the dyno
-		rez_id  string // TODO remove this unused field
+    Host    string `json:"host"`    // dynohost hostname where the dyno is started
+    Dyno_id string `json:"dyno_id"` // unique id for the dyno
+    Rez_id  string `json:"rez_id"`  // TODO remove this unused field
 	}
 
 	var msg GitActionMsg
@@ -240,7 +238,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	}
 
 	// connect to rendezvous, the dyno stdin/stdout-stderr stream hub
-	adr := msg.host + ":" + DYNOHOST_RENDEZVOUS_PORT
+	adr := msg.Host + ":" + DYNOHOST_RENDEZVOUS_PORT
 	conn, err := tls.Dial("tcp", adr, &tls.Config{
 		InsecureSkipVerify: true,
 	})
@@ -250,7 +248,7 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 	}
 
 	// Authenticate on rendezvous, and register the dyno
-	fmt.Fprintf(conn, APISERVER_KEY+"\n"+msg.dyno_id+"\n")
+	fmt.Fprintf(conn, APISERVER_KEY+"\n"+msg.Dyno_id+"\n")
 
 	// read everything from rendezvous connection and write to the ssh channel
 	for {
