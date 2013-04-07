@@ -6,8 +6,8 @@ import (
 	. "launchpad.net/gocheck"
 	"log"
 	"net"
-  "bytes"
   "io"
+  "bufio"
 	"net/http"
 	"testing"
   "strings"
@@ -87,7 +87,6 @@ func (s *MySuite) startApiServer(c *C) {
 
 	http.HandleFunc("/internal/myapp/gitaction", func(w http.ResponseWriter, r *http.Request) {
 		// check basic auth ':1234' encoded in base64 
-    log.Printf(r.Header.Get("Authorization"))
 		if !strings.EqualFold(r.Header.Get("Authorization"), "Basic OjEyMzQ=") {
 			http.Error(w, "Unauthorized", 401)
       return
@@ -130,10 +129,26 @@ func (s *MySuite) startDynohostRendezvous(c *C) {
         panic(err)
       }
       defer conn.Close()
-      go func() {
-        defer conn.Close()
-        fmt.Fprintf(conn, `Message from rendezvous`)
-      }()
+      reader := bufio.NewReader(conn)
+      apiKey, err := reader.ReadString('\n')
+      if err != nil {
+        panic(err)
+      }
+      apiKey = strings.Split(apiKey, "\n")[0]
+      if !strings.EqualFold(apiKey, "SUPER KEY") {
+        panic("apiKey " + apiKey + " is not valid")
+      }
+      dynoId, err := reader.ReadString('\n')
+      if err != nil {
+        panic(err)
+      }
+      dynoId = strings.Split(dynoId, "\n")[0]
+      if !strings.EqualFold(dynoId, "dyno_id") {
+        panic("dynoId " + dynoId + " is not valid")
+      }
+      fmt.Fprintf(conn, "E:fake error\n")
+      fmt.Fprintf(conn, "Success from rendezvous\n")
+      conn.Close();
     }
   }()
 }
@@ -202,16 +217,36 @@ func (s *MySuite) TestGoGitShouldAuthenticateAndProxySSHToRendezVous(c *C) {
   }
   defer session.Close()
 
-  var b bytes.Buffer
-  session.Stdout = &b
+  r, err := session.StdoutPipe()
+  if err != nil {
+    panic(err)
+  }
+  outReader := bufio.NewReader(r)
+
+  r, err = session.StderrPipe()
+  if err != nil {
+    panic(err)
+  }
+  errReader := bufio.NewReader(r)
 
   err = session.Run(`git-receive-pack 'myapp.git'`)
+  log.Printf("after run")
   if err == io.EOF {
     return
   }
   if err != nil {
-    panic(err)
+    //panic(err)
   }
-  fmt.Println(b.String())
 
+  stdout, err := outReader.ReadString('\n')
+  log.Printf("stdout: %v", stdout);
+  if !strings.EqualFold(stdout, "Success from rendezvous\n"){
+    panic("Wrong stdout message")
+  }
+
+  stderr, err := errReader.ReadString('\n')
+  log.Printf("stderr: %v", stderr);
+  if !strings.EqualFold(stderr, "fake error\n"){
+    panic("Wrong stderr message")
+  }
 }

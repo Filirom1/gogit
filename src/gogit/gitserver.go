@@ -6,6 +6,7 @@ import (
 	json "encoding/json"
 	"fmt"
 	"io"
+  "bufio"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -78,10 +79,7 @@ func StartGitServer() {
 				log.Printf("Key auth failed for %+v because %+v", fingerprint, string(Body))
 				return false
 			}
-			apiKey := string(Body)
-			cnn.User = apiKey
-			log.Println("User API key is " + cnn.User)
-
+			cnn.User = string(Body)
 			return true
 		},
 	}
@@ -200,6 +198,8 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 
 	// create a new temporary dyno to execute a git command
 	url := APISERVER_PROTOCOL + `://` + APISERVER_HOSTNAME + `:` + APISERVER_PORT + `/internal/` + appName + `/gitaction?command=` + gitCommand
+
+  log.Printf("Execute gitaction %v", url)
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal("Unable to build request", err)
@@ -239,6 +239,8 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 
 	// connect to rendezvous, the dyno stdin/stdout-stderr stream hub
 	adr := msg.Host + ":" + DYNOHOST_RENDEZVOUS_PORT
+
+  log.Printf("Connect to Dynohost Rendezvous %v", adr)
 	conn, err := tls.Dial("tcp", adr, &tls.Config{
 		InsecureSkipVerify: true,
 	})
@@ -246,25 +248,43 @@ func handleChannel(apiKey string, ch ssh.Channel) {
 		log.Fatal("unable to contact dynohost rendezvous "+adr, err)
 		return
 	}
+  defer conn.Close()
 
 	// Authenticate on rendezvous, and register the dyno
 	fmt.Fprintf(conn, APISERVER_KEY+"\n"+msg.Dyno_id+"\n")
+  
+  err = ch.AckRequest(true)
+  if err != nil {
+    log.Fatal(err)
+    return
+  }
+
+  stdErr := ch.Stderr()
 
 	// read everything from rendezvous connection and write to the ssh channel
 	for {
-		buf := make([]byte, 1024)
-		_, err := conn.Read(buf)
+    reader := bufio.NewReader(conn)
+    buf, err := reader.ReadBytes('\n')
 		if err == io.EOF {
-			continue
+      // TODO send exit-status message
+			return
 		}
 		if err != nil {
 			log.Fatal("Unable to read from dynohost rendezvous", err)
 			return
 		}
-		_, err = ch.Write(buf)
-		if err != nil {
-			log.Fatal("Unable to write to ssh channel", err)
-			return
-		}
+    if len(buf) >=2 && buf[0] == 'E' && buf[1] == ':'{
+      _, err = stdErr.Write(buf[2:])
+      if err != nil {
+        log.Fatal("Unable to write to ssh channel", err)
+        return
+      }
+    }else{
+      _, err = ch.Write(buf)
+      if err != nil {
+        log.Fatal("Unable to write to ssh channel", err)
+        return
+      }
+    }
 	}
 }
