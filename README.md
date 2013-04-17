@@ -60,7 +60,6 @@ It should prints something like this:
     2013/04/17 09:21:42 Mock Dynohost Rendezvous listen on 4000
     2013/04/17 09:21:42 Mock ApiServer serve resources
     2013/04/17 09:21:42 Mock Dynohost Rendezvous accept connection
-    2013/04/17 09:21:49 ici 1
     2013/04/17 09:21:49 Checking fingerprint https://localhost:5000/internal/lookupUserByPublicKey?fingerprint=AAAAB3NzaC1yc2EAAAADAQABAAABAQC%2B8HBsUHB3AKnFVpu%2B2jVI1tnAWOTXdpaR9Ey2z1Kbl%2Blg3gbGT956UPqJJjw2eyqCTOI5K3ELvcGglm8pxT0Pq01FylmEqmULrU6LslSbE64eWza9g8l%2BGZC4l8CD2mBmufb%2BCWdCDJLIwEFSQuLT0%2BWAVv3bNNVN8%2B%2FNCL%2BjYyOln9Rqb9RiY9tvbx%2FvICafThxiGRjF9Y10V%2BD0bui%2B90BAgkLuTg5XB%2BH1%2FKXtyEha9oPHxWVEP5v%2BN9fmiltCLlxh9Hqa%2BNLi6pR2U7RWSC79lcI%2Fbr3Wh8mmmwg7nK%2B6wcAW7L6prpFjesN8gB2dJvmAGH4JdKNQJOeSS4Ej 
     2013/04/17 09:21:49 Git Server accept connection
     2013/04/17 09:21:49 Git Server accept channel
@@ -73,6 +72,40 @@ It should prints something like this:
     2013/04/17 09:21:49 stderr: fake error
     OK: 1 passed
 
+## TODO
+
+The crypto ssh library was patched. It should be possible to avoid this.
+
+
+    diff -r 2e6f4675f294 ssh/server.go
+    --- a/ssh/server.go	Tue Apr 02 10:41:35 2013 -0400
+    +++ b/ssh/server.go	Wed Apr 17 09:33:19 2013 +0200
+    @@ -92,7 +92,7 @@
+      result     bool
+     }
+     
+    -const maxCachedPubKeys = 16
+    +const maxCachedPubKeys = 0
+     
+     // A ServerConn represents an incoming connection.
+     type ServerConn struct {
+    @@ -441,6 +441,7 @@
+            if len(payload) > 0 {
+              return ParseError{msgUserAuthRequest}
+            }
+    +        s.User = userAuthReq.User
+            if s.testPubKey(userAuthReq.User, algo, pubKey) {
+              okMsg := userAuthPubKeyOkMsg{
+                Algo:   algo,
+    @@ -484,7 +485,6 @@
+            default:
+              return errors.New("ssh: isAcceptableAlgo incorrect")
+            }
+    -				s.User = userAuthReq.User
+            if s.testPubKey(userAuthReq.User, algo, pubKey) {
+              break userAuthLoop
+            }
+
 ## License
 
 `gitmouth` and other `openruko` components are licensed under MIT.
@@ -82,3 +115,4 @@ It should prints something like this:
 ## Authors
 
 Filirom1
+
