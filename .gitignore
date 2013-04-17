@@ -1,0 +1,5 @@
+src/
+certs/
+fixture/
+pkg/
+*.test

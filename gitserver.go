@@ -1,4 +1,4 @@
-package gogit
+package main
 
 import (
 	"bufio"
@@ -27,8 +27,8 @@ func getOrDefault(str, defaultValue string) string {
 
 var (
 	GITMOUTH_PORT            = getOrDefault(os.Getenv("GITMOUTH_PORT"), "2222")
-	GITMOUTH_PRIVATE_KEY     = getOrDefault(os.Getenv("GITMOUTH_PRIVATE_KEY"), "../../certs/server.key")
-	GITMOUTH_PUBLIC_KEY      = getOrDefault(os.Getenv("GITMOUTH_PUBLIC_KEY"), "../../certs/server.key.pub")
+	GITMOUTH_PRIVATE_KEY     = getOrDefault(os.Getenv("GITMOUTH_PRIVATE_KEY"), "certs/server.key")
+	GITMOUTH_PUBLIC_KEY      = getOrDefault(os.Getenv("GITMOUTH_PUBLIC_KEY"), "certs/server.key.pub")
 	DYNOHOST_RENDEZVOUS_PORT = getOrDefault(os.Getenv("DYNOHOST_RENDEZVOUS_PORT"), "4000")
 	APISERVER_PROTOCOL       = getOrDefault(os.Getenv("APISERVER_PROTOCOL"), "https")
 	APISERVER_HOSTNAME       = getOrDefault(os.Getenv("APISERVER_HOSTNAME"), "localhost")

@@ -1,4 +1,4 @@
-package gogit
+package main
 
 import (
 	"bufio"
@@ -60,7 +60,7 @@ type MySuite struct {
 }
 
 func (s *MySuite) SetUpSuite(c *C) {
-	cert, err := tls.LoadX509KeyPair("../../certs/server-cert.pem", "../../certs/server-key.pem")
+	cert, err := tls.LoadX509KeyPair("fixture/server-cert.pem", "fixture/server-key.pem")
 	if err != nil {
 		panic(err)
 	}
