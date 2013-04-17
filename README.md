@@ -33,7 +33,7 @@ TODO: Ubuntu 12.04 LTS
 ## Installation
 
     $ git clone https://github.com/Filirom1/gogit.git
-    $ cd gotgit
+    $ cd gogit
     $ make init # Installing dependencies
     $ make certs # Setting up temporary openssl certs
 
