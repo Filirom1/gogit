@@ -99,23 +99,21 @@ func StartGitServer() {
 	if err != nil {
 		log.Fatal("failed to listen for connection")
 	}
-	go func() {
-		for {
-			// A ServerConn multiplexes several channels, which must 
-			// themselves be Accepted.
-			log.Println("Git Server accept connection")
-			sConn, err := listener.Accept()
-			if err != nil {
-				log.Fatal("failed to accept incoming connection")
-				continue
-			}
-			if err := sConn.Handshake(); err != nil {
-				log.Fatal("failed to handshake")
-				continue
-			}
-			go handleServerConn(sConn)
-		}
-	}()
+  for {
+    // A ServerConn multiplexes several channels, which must 
+    // themselves be Accepted.
+    log.Println("Git Server accept connection")
+    sConn, err := listener.Accept()
+    if err != nil {
+      log.Fatal("failed to accept incoming connection")
+      continue
+    }
+    if err := sConn.Handshake(); err != nil {
+      log.Fatal("failed to handshake")
+      continue
+    }
+    go handleServerConn(sConn)
+  }
 }
 
 func handleServerConn(sConn *ssh.ServerConn) {

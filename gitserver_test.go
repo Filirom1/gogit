@@ -69,7 +69,7 @@ func (s *MySuite) SetUpSuite(c *C) {
 		Certificates: []tls.Certificate{cert},
 	}
 
-	StartGitServer()
+	go StartGitServer()
 	s.startApiServer(c)
 	s.startDynohostRendezvous(c)
 }
